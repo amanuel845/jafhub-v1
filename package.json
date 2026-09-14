@@ -1,0 +1,15 @@
+{
+  "name": "github-api-playground",
+  "version": "2.0.0",
+  "private": true,
+  "description": "GitHub REST API playground with a Vercel serverless proxy",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@vercel/node": "^5.4.0"
+  }
+}
