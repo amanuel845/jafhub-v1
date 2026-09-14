@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1117">
+<title>GitHub API Playground</title>
+<style>
+:root{color-scheme:dark;--bg:#0d1117;--panel:#161b22;--panel2:#0f141a;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#238636;--red:#f85149}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{border-bottom:1px solid var(--border);padding:22px max(20px,calc((100vw - 1400px)/2));background:#0d1117}
+.brand{display:flex;gap:12px;align-items:center}.mark{width:38px;height:38px;border:1px solid var(--border);border-radius:9px;display:grid;place-items:center;font-size:21px}
+h1{font-size:20px;margin:0}header p{margin:2px 0 0;color:var(--muted)}
+main{max-width:1400px;margin:auto;padding:18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;min-width:0}.title{padding:12px 14px;border-bottom:1px solid var(--border);font-weight:650}
+.controls{padding:14px;display:grid;gap:12px}.request-line{display:grid;grid-template-columns:105px 1fr auto;gap:8px}
+input,select,textarea,button{font:inherit}input,select,textarea{border:1px solid var(--border);background:#0d1117;color:var(--text);border-radius:7px;padding:9px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 2px #58a6ff22}textarea{width:100%;height:260px;resize:vertical;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}
+button{border:1px solid var(--border);background:#21262d;color:var(--text);border-radius:7px;padding:9px 14px;cursor:pointer}button:hover{filter:brightness(1.15)}button.primary{background:var(--green);border-color:#2ea043;font-weight:650}
+.examples{display:flex;flex-wrap:wrap;gap:7px}.examples button{font-size:12px;padding:6px 9px}
+.label{color:var(--muted);font-size:12px;margin-bottom:5px}.hint{font-size:12px;color:var(--muted)}
+.response-head{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);color:var(--muted)}
+.status{font-weight:700}.ok{color:#3fb950}.bad{color:var(--red)}
+pre{margin:0;padding:14px;min-height:480px;max-height:70vh;overflow:auto;white-space:pre-wrap;word-break:break-word;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}
+code{color:var(--blue)}footer{max-width:1400px;margin:auto;padding:0 18px 24px;color:var(--muted);font-size:12px}
+@media(max-width:850px){main{grid-template-columns:1fr}.request-line{grid-template-columns:95px 1fr}.request-line button{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">⌘</div>
+    <div><h1>GitHub API Playground</h1><p>Explore the GitHub REST API through a server-side Vercel proxy.</p></div>
+  </div>
+</header>
+
+<main>
+<section class="panel">
+  <div class="title">Request</div>
+  <div class="controls">
+    <div class="request-line">
+      <select id="method" aria-label="HTTP method">
+        <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option>
+      </select>
+      <input id="path" value="/repos/octocat/Hello-World" aria-label="GitHub API path" spellcheck="false">
+      <button class="primary" id="send">Send request</button>
+    </div>
+
+    <div>
+      <div class="label">Examples</div>
+      <div class="examples">
+        <button data-method="GET" data-path="/rate_limit">Rate limit</button>
+        <button data-method="GET" data-path="/user">Authenticated user</button>
+        <button data-method="GET" data-path="/user/repos?per_page=10&sort=updated">My repositories</button>
+        <button data-method="GET" data-path="/repos/octocat/Hello-World">Public repository</button>
+        <button data-method="GET" data-path="/repos/octocat/Hello-World/issues?per_page=10">Issues</button>
+        <button data-method="GET" data-path="/repos/octocat/Hello-World/contents/README.md">File contents</button>
+        <button data-method="GET" data-path="/search/repositories?q=javascript&per_page=10">Search repos</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="label">JSON body</div>
+      <textarea id="body" spellcheck="false">{
+  "title": "Hello from the playground",
+  "body": "Created through my GitHub API Playground"
+}</textarea>
+    </div>
+
+    <div class="hint">
+      Use any GitHub REST API path beginning with <code>/</code>. The proxy always targets
+      <code>https://api.github.com</code>. Configure <code>GITHUB_TOKEN</code> as a Vercel environment variable for authenticated requests.
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="title">Response</div>
+  <div class="response-head">
+    <span id="status" class="status">—</span>
+    <span id="time">—</span>
+    <span id="size">—</span>
+  </div>
+  <pre id="output">Send a request to see the GitHub API response.</pre>
+</section>
+</main>
+
+<footer>
+  GitHub API Playground · Keep tokens in Vercel Environment Variables, never in frontend code.
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const method = $("method"), path = $("path"), body = $("body"), output = $("output");
+
+document.querySelectorAll("[data-path]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    method.value = btn.dataset.method;
+    path.value = btn.dataset.path;
+    updateBodyState();
+  });
+});
+
+function updateBodyState() {
+  const needsBody = ["POST","PUT","PATCH"].includes(method.value);
+  body.disabled = !needsBody;
+  body.style.opacity = needsBody ? "1" : ".55";
+}
+method.addEventListener("change", updateBodyState);
+updateBodyState();
+
+async function send() {
+  let payload;
+  const needsBody = ["POST","PUT","PATCH"].includes(method.value);
+
+  if (needsBody) {
+    try { payload = JSON.parse(body.value); }
+    catch (e) {
+      $("status").textContent = "Invalid JSON";
+      $("status").className = "status bad";
+      output.textContent = e.message;
+      return;
+    }
+  }
+
+  let requestPath = path.value.trim();
+  if (!requestPath.startsWith("/")) requestPath = "/" + requestPath;
+
+  $("status").textContent = "Loading…";
+  $("status").className = "status";
+  $("time").textContent = "";
+  $("size").textContent = "";
+
+  const started = performance.now();
+
+  try {
+    const response = await fetch("/api" + requestPath, {
+      method: method.value,
+      headers: needsBody ? {"Content-Type":"application/json"} : {},
+      body: needsBody ? JSON.stringify(payload) : undefined
+    });
+
+    const text = await response.text();
+    const elapsed = Math.round(performance.now() - started);
+
+    $("status").textContent = `${response.status} ${response.statusText}`;
+    $("status").className = "status " + (response.ok ? "ok" : "bad");
+    $("time").textContent = `${elapsed} ms`;
+    $("size").textContent = `${new Blob([text]).size.toLocaleString()} bytes`;
+
+    try {
+      output.textContent = JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+      output.textContent = text;
+    }
+  } catch (error) {
+    $("status").textContent = "Network error";
+    $("status").className = "status bad";
+    output.textContent = error.stack || error.message;
+  }
+}
+
+$("send").addEventListener("click", send);
+path.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+</script>
+</body>
+</html>
